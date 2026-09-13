@@ -1,0 +1,253 @@
+/* PrintView 専用スタイル & 印刷メディアクエリ */
+.print-view-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 0 60px;
+}
+
+.print-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.shiori-sheet {
+  background: #fff;
+  padding: 48px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+  color: #1e293b;
+}
+
+.shiori-header {
+  border-bottom: 2px solid #0d9488;
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.shiori-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.15em;
+  font-weight: 800;
+  color: #0d9488;
+  text-transform: uppercase;
+}
+
+.shiori-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 6px 0 16px;
+}
+
+.shiori-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.shiori-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shiori-memo-box {
+  margin-top: 14px;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: #64748b;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.shiori-section {
+  margin-bottom: 32px;
+}
+
+.shiori-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.shiori-days-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.shiori-day-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.shiori-day-header {
+  margin-bottom: 12px;
+}
+
+.shiori-day-badge {
+  background: #0d9488;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.shiori-timeline-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shiori-schedule-row {
+  display: flex;
+  gap: 14px;
+  font-size: 0.9rem;
+}
+
+.shiori-time {
+  font-weight: 800;
+  color: #0d9488;
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.shiori-schedule-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.shiori-schedule-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.shiori-location {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.shiori-submemo {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.shiori-spots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.shiori-spot-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+}
+
+.shiori-spot-sub {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.shiori-spot-tips {
+  font-size: 0.74rem;
+  color: #166534;
+  background: #f0fdf4;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.shiori-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.shiori-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shiori-box {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #94a3b8;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.shiori-box.checked {
+  background: #0d9488;
+  color: #fff;
+  border-color: #0d9488;
+}
+
+.done-text {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.shiori-budget-summary {
+  display: flex;
+  gap: 24px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.shiori-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 36px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* 印刷用CSS */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .no-print, .site-header, .trip-hero, .nav-tabs-wrapper {
+    display: none !important;
+  }
+  .shiori-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  .print-view-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+}
