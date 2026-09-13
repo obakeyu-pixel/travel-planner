@@ -9,7 +9,7 @@ on:
 
 jobs:
   # ========================================================
-  # 1. Android アプリの自動ビルド (Google Play 用 .aab & テスト用 .apk)
+  # 1. Android アプリの自動ビルド (実機インストール用 APK & バンドル)
   # ========================================================
   build-android:
     name: 🤖 Build Android App
@@ -30,33 +30,33 @@ jobs:
           java-version: 17
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web App
         run: npm run build
 
       - name: Sync Capacitor Android
-        run: npx cap sync android
+        run: npx @capacitor/cli sync android
 
-      - name: Make gradlew executable
-        run: chmod +x android/gradlew
+      - name: Make gradlew executable & fix line endings
+        run: |
+          sed -i -e 's/\r$//' android/gradlew
+          chmod +x android/gradlew
 
-      - name: Build Android Release APK & AAB
+      - name: Build Android APK (Debug & Unsigned Release)
         working-directory: android
-        run: ./gradlew assembleRelease bundleRelease --stacktrace
+        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload Android App Bundle & APK
+      - name: Upload Android APK (ダウンロードしてスマホで動かせるアプリ)
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Android-App-Files
-          path: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/bundle/release/*.aab
+          name: Android-App-APK
+          path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14
 
   # ========================================================
-  # 2. iOS アプリの自動ビルド (クラウドMac / App Store 用)
+  # 2. iOS アプリの自動ビルド (クラウドMac / iPhone用)
   # ========================================================
   build-ios:
     name: 🍏 Build iOS App (Cloud macOS)
@@ -71,13 +71,13 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web App
         run: npm run build
 
       - name: Sync Capacitor iOS
-        run: npx cap sync ios
+        run: npx @capacitor/cli sync ios
 
       - name: Build iOS App with Xcode
         working-directory: ios/App
@@ -86,14 +86,15 @@ jobs:
             -project App.xcodeproj \
             -scheme App \
             -destination 'generic/platform=iOS' \
-            -configuration Release \
+            -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            archive -archivePath ./build/App.xcarchive
+            CODE_SIGNING_REQUIRED=NO \
+            build
 
-      - name: Upload iOS App Archive
+      - name: Upload iOS App Build
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: iOS-App-Archive
-          path: ios/App/build/App.xcarchive
+          name: iOS-App-Build
+          path: ios/App/build
           retention-days: 14
