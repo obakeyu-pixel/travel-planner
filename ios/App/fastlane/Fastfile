@@ -32,8 +32,17 @@ platform :ios do
       api_key: api_key
     )
 
-    # 5. プロジェクトの署名設定を手動署名に切り替え（CIビルドでチームエラーを防ぐ）
-    disable_automatic_code_signing(path: "App.xcodeproj")
+    # 5. プロジェクトの署名設定を手動署名に切り替え ＆ プロファイルをターゲットに紐付け
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "App.xcodeproj"
+    )
+
+    update_project_provisioning(
+      xcodeproj: "App.xcodeproj",
+      profile: Actions.lane_context[Actions::SharedValues::SIGH_PROFILE_PATH],
+      target_filter: ".*"
+    )
 
     # 6. 正式署名してIPAをビルド
     build_app(
@@ -41,7 +50,8 @@ platform :ios do
       scheme: "App",
       export_method: "app-store",
       output_directory: "build-output",
-      output_name: "App.ipa"
+      output_name: "App.ipa",
+      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual'"
     )
 
     # 6. App Store Connectへ高速アップロード
