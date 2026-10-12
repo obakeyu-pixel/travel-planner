@@ -1,3 +1,4 @@
+opt_out_usage
 default_platform(:ios)
 
 platform :ios do
@@ -12,10 +13,9 @@ platform :ios do
     )
 
     # 2. CI環境用の一時キーチェーンを作成
-    keychain_name = "ci_keychain"
     keychain_password = "ci_keychain_password"
-    create_keychain(
-      name: keychain_name,
+    keychain_path = create_keychain(
+      name: "ci_keychain",
       password: keychain_password,
       default_keychain: true,
       unlock: true,
@@ -25,7 +25,7 @@ platform :ios do
 
     # 3. Apple公式の配布証明書（Distribution Certificate）を取得/作成
     get_certificates(
-      keychain_name: keychain_name,
+      keychain_path: keychain_path,
       keychain_password: keychain_password,
       api_key: api_key
     )
