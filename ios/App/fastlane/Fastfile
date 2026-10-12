@@ -47,14 +47,15 @@ platform :ios do
       target_filter: ".*"
     )
 
-    # 6. 正式署名してIPAをビルド（Team IDとプロファイルを明示指定）
+    # 6. 正式署名してIPAをビルド（事前解決済みパッケージを使用しフリーズを防止）
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
       export_method: "app-store",
       output_directory: "build-output",
       output_name: "App.ipa",
-      xcargs: "DEVELOPMENT_TEAM='NM2JJ63FAN' PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual' CODE_SIGN_IDENTITY='Apple Distribution'"
+      skip_package_dependencies_resolution: true,
+      xcargs: "-disableAutomaticPackageResolution DEVELOPMENT_TEAM='NM2JJ63FAN' PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual' CODE_SIGN_IDENTITY='Apple Distribution'"
     )
 
     # 7. App Store Connectへ高速アップロード
