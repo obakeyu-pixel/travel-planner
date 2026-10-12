@@ -4,6 +4,16 @@ default_platform(:ios)
 platform :ios do
   desc "Build and upload iOS app to App Store Connect"
   lane :release do
+    # 0. CI用の一時キーチェーンを作成（codesignがGUIプロンプトで固まるのを完全防止）
+    create_keychain(
+      name: "ci_keychain",
+      password: "ci_password",
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      add_to_search_list: true
+    )
+
     # 1. App Store Connect API Key 設定
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
@@ -23,16 +33,24 @@ platform :ios do
       UI.message("Certificate cleanup note: #{e.message}")
     end
 
-    # 3. Apple公式の配布証明書（Distribution Certificate）を取得/作成
-    get_certificates(api_key: api_key)
+    # 3. Apple公式の配布証明書（Distribution Certificate）を取得し、CIキーチェーンへ登録
+    keychain_file = File.expand_path("~/Library/Keychains/ci_keychain-db")
+    get_certificates(
+      api_key: api_key,
+      keychain_path: keychain_file,
+      keychain_password: "ci_password"
+    )
 
-    # 4. App Store用プロビジョニングプロファイルを取得/作成
+    # 4. codesignがパスワード入力なしで秘密鍵を使えるよう、ACL（パーティションリスト）を更新
+    sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci_password #{keychain_file} || true")
+
+    # 5. App Store用プロビジョニングプロファイルを取得/作成
     get_provisioning_profile(
       app_identifier: "com.tabiplan.travelapp",
       api_key: api_key
     )
 
-    # 5. プロジェクトの署名設定を手動署名に切り替え ＆ プロファイルをターゲットに紐付け
+    # 6. プロジェクトの署名設定を手動署名に切り替え ＆ プロファイルをターゲットに紐付け
     profile_path = Actions.lane_context[Actions::SharedValues::SIGH_PROFILE_PATH]
 
     update_code_signing_settings(
@@ -47,7 +65,7 @@ platform :ios do
       target_filter: ".*"
     )
 
-    # 6. 正式署名してIPAをビルド（事前解決済みパッケージを使用しフリーズを防止）
+    # 7. 正式署名してIPAをビルド（事前解決済みパッケージを使用しフリーズを防止）
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
@@ -58,7 +76,7 @@ platform :ios do
       xcargs: "-disableAutomaticPackageResolution DEVELOPMENT_TEAM='NM2JJ63FAN' PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual' CODE_SIGN_IDENTITY='Apple Distribution'"
     )
 
-    # 7. App Store Connectへ高速アップロード
+    # 8. App Store Connectへ高速アップロード
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: true
