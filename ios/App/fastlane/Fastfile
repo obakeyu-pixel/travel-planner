@@ -12,7 +12,7 @@ platform :ios do
       in_house: false
     )
 
-    # 2. 証明書上限枠の自動クリーンアップ（前回作成された不要な証明書を削除して空き枠を作成）
+    # 2. 証明書上限枠の自動クリーンアップ（古い証明書を削除して空き枠を維持）
     begin
       certs = Spaceship::ConnectAPI::Certificate.all
       dist_certs = certs.select { |c| c.certificate_type.to_s.upcase.include?("DISTRIBUTION") }
@@ -32,23 +32,13 @@ platform :ios do
       api_key: api_key
     )
 
-    # 5. プロファイルからTeam IDを自動抽出し、プロジェクトとビルド引数に反映
+    # 5. プロジェクトの署名設定を手動署名に切り替え ＆ プロファイルをターゲットに紐付け
     profile_path = Actions.lane_context[Actions::SharedValues::SIGH_PROFILE_PATH]
-    plist_xml = sh("security cms -D -i #{profile_path}")
-    team_id = plist_xml[/<key>TeamIdentifier<\/key>.*?<string>([^<]+)<\/string>/m, 1]
-    UI.message("Extracted Development Team ID: #{team_id}")
-
-    if team_id
-      update_project_team(
-        path: "App.xcodeproj",
-        team_id: team_id
-      )
-    end
 
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "App.xcodeproj",
-      team_id: team_id
+      team_id: "NM2JJ63FAN"
     )
 
     update_project_provisioning(
@@ -64,10 +54,10 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build-output",
       output_name: "App.ipa",
-      xcargs: "DEVELOPMENT_TEAM='#{team_id}' PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual' CODE_SIGN_IDENTITY='Apple Distribution'"
+      xcargs: "DEVELOPMENT_TEAM='NM2JJ63FAN' PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual' CODE_SIGN_IDENTITY='Apple Distribution'"
     )
 
-    # 6. App Store Connectへ高速アップロード
+    # 7. App Store Connectへ高速アップロード
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: true
