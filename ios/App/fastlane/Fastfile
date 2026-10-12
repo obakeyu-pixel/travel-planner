@@ -4,15 +4,22 @@ default_platform(:ios)
 platform :ios do
   desc "Build and upload iOS app to App Store Connect"
   lane :release do
+    keychain_name = "ci_temp_keychain"
+    keychain_password = "temp_password_123"
+
     # 0. CI用の一時キーチェーンを作成（codesignがGUIプロンプトで固まるのを完全防止）
+    delete_keychain(name: keychain_name) rescue nil
     create_keychain(
-      name: "ci_keychain",
-      password: "ci_password",
+      name: keychain_name,
+      password: keychain_password,
       default_keychain: true,
       unlock: true,
       timeout: 3600,
-      add_to_search_list: true
+      lock_when_sleeps: false
     )
+
+    custom_keychain_path = lane_context[SharedValues::KEYCHAIN_PATH]
+    UI.message("Created CI keychain at: #{custom_keychain_path}")
 
     # 1. App Store Connect API Key 設定
     api_key = app_store_connect_api_key(
@@ -34,15 +41,14 @@ platform :ios do
     end
 
     # 3. Apple公式の配布証明書（Distribution Certificate）を取得し、CIキーチェーンへ登録
-    keychain_file = File.expand_path("~/Library/Keychains/ci_keychain-db")
     get_certificates(
       api_key: api_key,
-      keychain_path: keychain_file,
-      keychain_password: "ci_password"
+      keychain_name: keychain_name,
+      keychain_path: custom_keychain_path
     )
 
     # 4. codesignがパスワード入力なしで秘密鍵を使えるよう、ACL（パーティションリスト）を更新
-    sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci_password #{keychain_file} || true")
+    sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k #{keychain_password} #{custom_keychain_path} || true")
 
     # 5. App Store用プロビジョニングプロファイルを取得/作成
     get_provisioning_profile(
@@ -81,5 +87,7 @@ platform :ios do
       api_key: api_key,
       skip_waiting_for_build_processing: true
     )
+  ensure
+    delete_keychain(name: "ci_temp_keychain") rescue nil
   end
 end
