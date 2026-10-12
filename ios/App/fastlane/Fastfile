@@ -12,28 +12,27 @@ platform :ios do
       in_house: false
     )
 
-    # 2. CI環境用の一時キーチェーンを作成
-    keychain_password = "ci_keychain_password"
-    keychain_path = create_keychain(
-      name: "ci_keychain",
-      password: keychain_password,
-      default_keychain: true,
-      unlock: true,
-      timeout: 3600,
-      lock_when_sleeps: false
-    )
+    # 2. Apple公式の配布証明書（Distribution Certificate）を取得/作成
+    get_certificates(api_key: api_key)
 
-    # 3. Apple公式の配布証明書（Distribution Certificate）を取得/作成
-    get_certificates(
-      keychain_path: keychain_path,
-      keychain_password: keychain_password,
-      api_key: api_key
-    )
-
-    # 4. App Store用プロビジョニングプロファイルを取得/作成
+    # 3. App Store用プロビジョニングプロファイルを取得/作成
     get_provisioning_profile(
       app_identifier: "com.tabiplan.travelapp",
       api_key: api_key
+    )
+
+    # 4. プロジェクトのチームIDと署名設定を自動同期
+    team_id = Actions.lane_context[Actions::SharedValues::SIGH_TEAM_ID]
+    if team_id
+      update_project_team(
+        path: "App.xcodeproj",
+        team_id: team_id
+      )
+    end
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "App.xcodeproj"
     )
 
     # 5. 正式署名してIPAをビルド

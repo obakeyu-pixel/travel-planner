@@ -88,6 +88,7 @@ jobs:
         run: |
           mkdir -p fastlane
           echo "$APP_STORE_CONNECT_PRIVATE_KEY" > fastlane/AuthKey.p8
+          security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db || true
           fastlane release
 
       - name: Upload iOS App IPA Artifact
