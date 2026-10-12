@@ -21,21 +21,7 @@ platform :ios do
       api_key: api_key
     )
 
-    # 4. プロジェクトのチームIDと署名設定を自動同期
-    team_id = Actions.lane_context[Actions::SharedValues::SIGH_TEAM_ID]
-    if team_id
-      update_project_team(
-        path: "App.xcodeproj",
-        team_id: team_id
-      )
-    end
-
-    update_code_signing_settings(
-      use_automatic_signing: false,
-      path: "App.xcodeproj"
-    )
-
-    # 5. 正式署名してIPAをビルド
+    # 4. 正式署名してIPAをビルド
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
@@ -44,7 +30,7 @@ platform :ios do
       output_name: "App.ipa"
     )
 
-    # 6. App Store Connectへ自動アップロード
+    # 5. App Store Connectへ自動アップロード
     upload_to_app_store(
       api_key: api_key,
       skip_metadata: true,
