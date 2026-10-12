@@ -12,16 +12,27 @@ platform :ios do
       in_house: false
     )
 
-    # 2. Apple公式の配布証明書（Distribution Certificate）を取得/作成
+    # 2. 証明書上限枠の自動クリーンアップ（前回作成された不要な証明書を削除して空き枠を作成）
+    begin
+      certs = Spaceship::ConnectAPI::Certificate.all
+      dist_certs = certs.select { |c| c.certificate_type.to_s.upcase.include?("DISTRIBUTION") }
+      if dist_certs.length >= 2
+        dist_certs.first.delete!
+      end
+    rescue => e
+      UI.message("Certificate cleanup note: #{e.message}")
+    end
+
+    # 3. Apple公式の配布証明書（Distribution Certificate）を取得/作成
     get_certificates(api_key: api_key)
 
-    # 3. App Store用プロビジョニングプロファイルを取得/作成
+    # 4. App Store用プロビジョニングプロファイルを取得/作成
     get_provisioning_profile(
       app_identifier: "com.tabiplan.travelapp",
       api_key: api_key
     )
 
-    # 4. 正式署名してIPAをビルド
+    # 5. 正式署名してIPAをビルド
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
@@ -30,12 +41,10 @@ platform :ios do
       output_name: "App.ipa"
     )
 
-    # 5. App Store Connectへ自動アップロード
-    upload_to_app_store(
+    # 6. App Store Connectへ高速アップロード
+    upload_to_testflight(
       api_key: api_key,
-      skip_metadata: true,
-      skip_screenshots: true,
-      force: true
+      skip_waiting_for_build_processing: true
     )
   end
 end
