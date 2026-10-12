@@ -1,4 +1,4 @@
-name: Build Mobile Apps (iOS & Android)
+name: Build & Release iOS App
 
 on:
   workflow_dispatch:
@@ -8,56 +8,6 @@ on:
       - master
 
 jobs:
-  # ========================================================
-  # 1. Android アプリの自動ビルド (実機インストール用 APK & バンドル)
-  # ========================================================
-  build-android:
-    name: 🤖 Build Android App
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: 21
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Build Web App
-        run: npm run build
-
-      - name: Sync Capacitor Android
-        run: npx @capacitor/cli sync android
-
-      - name: Make gradlew executable & fix line endings
-        run: |
-          sed -i -e 's/\r$//' android/gradlew
-          chmod +x android/gradlew
-
-      - name: Build Android APK (Debug & Unsigned Release)
-        working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
-
-      - name: Upload Android APK (ダウンロードしてスマホで動かせるアプリ)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: Android-App-APK
-          path: android/app/build/outputs/apk/debug/*.apk
-          retention-days: 14
-
-  # ========================================================
-  # 2. iOS アプリの自動ビルド ＆ App Store Connect 自動送信
-  # ========================================================
   build-ios:
     name: 🍏 Build & Upload iOS App to App Store Connect
     runs-on: macos-14
