@@ -13,10 +13,11 @@ import {
   CalendarPlus,
   Phone,
   Ticket,
-  Users
+  Users,
+  Camera
 } from 'lucide-react';
 import type { Spot, SpotCategory, ScheduleCategory } from '../types/travel';
-import { RECOMMENDED_SPOTS } from '../data/sampleData';
+import { PhotoEditorModal } from './PhotoEditorModal';
 
 interface SpotExplorerProps {
   savedSpots: Spot[];
@@ -25,6 +26,7 @@ interface SpotExplorerProps {
   onAddCustomSpot: (spot: Spot) => void;
   onAddToSchedule: (spot: Spot, dayNumber: number, time: string, category: ScheduleCategory) => void;
   onToggleMemberVote: (spotId: string, memberName: string) => void;
+  onUpdateSpotPhoto?: (spotId: string, newImageUrl?: string) => void;
   totalDays: number;
 }
 
@@ -45,6 +47,7 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
   onAddCustomSpot,
   onAddToSchedule,
   onToggleMemberVote,
+  onUpdateSpotPhoto,
   totalDays,
 }) => {
   const [selectedArea, setSelectedArea] = useState<string>('all');
@@ -56,10 +59,11 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
   const [scheduleModalSpot, setScheduleModalSpot] = useState<Spot | null>(null);
   const [scheduleDay, setScheduleDay] = useState(1);
   const [scheduleTime, setScheduleTime] = useState('10:00');
+  const [editingPhotoSpot, setEditingPhotoSpot] = useState<Spot | null>(null);
   
   // 新規スポットフォーム
   const [newSpotName, setNewSpotName] = useState('');
-  const [newSpotArea, setNewSpotArea] = useState('京都');
+  const [newSpotArea, setNewSpotArea] = useState('');
   const [newSpotCategory, setNewSpotCategory] = useState<SpotCategory>('sightseeing');
   const [newSpotDesc, setNewSpotDesc] = useState('');
   const [newSpotDuration, setNewSpotDuration] = useState('約1時間');
@@ -73,19 +77,12 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
   // スポットの保存状態を判定
   const isSpotSaved = (spotId: string) => savedSpots.some((s) => s.id === spotId);
 
-  // 全スポット（マスター＋カスタム保存されたスポット）にsavedSpotsの最新投票・保存状態をマージ
-  const allSpots = [
-    ...RECOMMENDED_SPOTS.map((recSpot) => {
-      const savedMatch = savedSpots.find((s) => s.id === recSpot.id);
-      return savedMatch 
-        ? { ...recSpot, wantedMembers: savedMatch.wantedMembers || [], isSaved: true } 
-        : recSpot;
-    }),
-    ...savedSpots.filter((s) => s.isCustom && !RECOMMENDED_SPOTS.some((r) => r.id === s.id))
-  ];
+  // ユーザーが登録・保存したスポットのみを対象とする（デフォルト観光地は全廃）
+  const allSpots = savedSpots.map((s) => ({ ...s, isSaved: true }));
 
-  // エリア一覧の抽出
-  const areas = ['all', ...Array.from(new Set(allSpots.map((s) => s.area)))];
+  // エリア一覧の抽出（登録されたスポットのエリアのみ）
+  const dynamicAreas = Array.from(new Set(allSpots.map((s) => s.area).filter(Boolean)));
+  const areas = dynamicAreas.length > 0 ? ['all', ...dynamicAreas] : [];
 
   // フィルタリング処理
   const filteredSpots = allSpots.filter((spot) => {
@@ -110,7 +107,7 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
       area: newSpotArea.trim() || 'その他',
       category: newSpotCategory,
       description: newSpotDesc.trim() || 'メンバーが登録した行きたいスポット',
-      imageUrl: newSpotImage.trim() || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80',
+      imageUrl: newSpotImage.trim() || undefined,
       recommendedDuration: newSpotDuration || '約1時間',
       estimatedBudget: newSpotBudget || '予算未定',
       tips: newSpotTips.trim(),
@@ -152,10 +149,10 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
         <div>
           <h2 className="section-title">
             <Compass className="icon-teal" size={24} />
-            どこ行く？（おすすめスポット＆行きたい場所）
+            どこ行く？（行きたいスポット）
           </h2>
           <p className="section-desc">
-            電話番号や住所、予約サイトURL付きの厳選スポット集。友達と「ここ行きたい！」と投票しながら旅程を組めます。
+            行きたい観光地やカフェ・レストランを登録。メンバーと「ここ行きたい！」と投票しながら旅程に組み込めます。
           </p>
         </div>
         <button 
@@ -167,114 +164,187 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
         </button>
       </div>
 
-      {/* 検索＆フィルターバー */}
-      <div className="card filter-bar-card">
-        {/* キーワード検索 */}
-        <div className="search-input-wrap">
-          <Search size={18} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="スポット名、見どころ、住所、キーワード（例: 抹茶、水族館、夜景）で検索..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          {searchQuery && (
-            <button className="clear-search-btn" onClick={() => setSearchQuery('')}>×</button>
-          )}
+      {/* スポットが0件の初期白紙状態 */}
+      {allSpots.length === 0 ? (
+        <div className="empty-state card" style={{ padding: '48px 24px', textAlign: 'center', marginTop: '16px' }}>
+          <Compass size={48} className="empty-icon" style={{ margin: '0 auto 12px', color: 'var(--primary)' }} />
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '8px' }}>登録されているスポットはありません</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
+            各地の観光地サンプルはすべてクリアされています。<br />
+            右上の「＋ 行きたい場所を新しく登録」から、行きたい観光地やお店を自由に追加してください。
+          </p>
+          <button 
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setIsAddModalOpen(true)}
+            style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Plus size={16} /> 行きたい場所を新しく登録する
+          </button>
         </div>
+      ) : (
+        <>
+          {/* 検索＆フィルターバー */}
+          <div className="card filter-bar-card">
+            {/* キーワード検索 */}
+            <div className="search-input-wrap">
+              <Search size={18} className="search-icon" />
+              <input 
+                type="text" 
+                placeholder="スポット名、見どころ、住所、キーワードで検索..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+              {searchQuery && (
+                <button className="clear-search-btn" onClick={() => setSearchQuery('')}>×</button>
+              )}
+            </div>
 
-        <div className="filter-tags-row">
-          {/* エリアフィルター */}
-          <div className="filter-group">
-            <span className="filter-label"><MapPin size={14} /> エリア:</span>
-            <div className="filter-chips">
-              {areas.map((area) => (
-                <button
-                  key={area}
-                  className={`chip-btn ${selectedArea === area ? 'active' : ''}`}
-                  onClick={() => setSelectedArea(area)}
-                >
-                  {area === 'all' ? 'すべての地域' : area}
-                </button>
-              ))}
+            <div className="filter-tags-row">
+              {/* エリアフィルター（エリアが存在する場合のみ表示） */}
+              {areas.length > 1 && (
+                <div className="filter-group">
+                  <span className="filter-label"><MapPin size={14} /> エリア:</span>
+                  <div className="filter-chips">
+                    {areas.map((area) => (
+                      <button
+                        key={area}
+                        className={`chip-btn ${selectedArea === area ? 'active' : ''}`}
+                        onClick={() => setSelectedArea(area)}
+                      >
+                        {area === 'all' ? 'すべての地域' : area}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ジャンルフィルター */}
+              <div className="filter-group">
+                <span className="filter-label"><Filter size={14} /> ジャンル:</span>
+                <div className="filter-chips">
+                  <button
+                    className={`chip-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    すべて
+                  </button>
+                  {(Object.keys(CATEGORY_MAP) as SpotCategory[]).map((cat) => (
+                    <button
+                      key={cat}
+                      className={`chip-btn ${selectedCategory === cat ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(cat)}
+                    >
+                      {CATEGORY_MAP[cat].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ジャンルフィルター */}
-          <div className="filter-group">
-            <span className="filter-label"><Filter size={14} /> ジャンル:</span>
-            <div className="filter-chips">
-              <button
-                className={`chip-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-                onClick={() => setSelectedCategory('all')}
-              >
-                すべて
-              </button>
-              {(Object.keys(CATEGORY_MAP) as SpotCategory[]).map((cat) => (
-                <button
-                  key={cat}
-                  className={`chip-btn ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {CATEGORY_MAP[cat].label}
-                </button>
-              ))}
-            </div>
+          {/* ヒット件数・ステータス表示 */}
+          <div className="results-count-bar">
+            <span>全 <strong>{filteredSpots.length}</strong> 件のスポット</span>
+            {savedSpots.length > 0 && (
+              <span className="saved-summary-pill">
+                <Heart size={14} fill="#f43f5e" color="#f43f5e" />
+                行きたいリスト: {savedSpots.length} 件ストック中
+              </span>
+            )}
           </div>
-        </div>
-      </div>
 
-      {/* ヒット件数・ステータス表示 */}
-      <div className="results-count-bar">
-        <span>全 <strong>{filteredSpots.length}</strong> 件のスポット</span>
-        {savedSpots.length > 0 && (
-          <span className="saved-summary-pill">
-            <Heart size={14} fill="#f43f5e" color="#f43f5e" />
-            行きたいリスト: {savedSpots.length} 件ストック中
-          </span>
-        )}
-      </div>
-
-      {/* スポットカードグリッド */}
-      <div className="spots-grid">
-        {filteredSpots.map((spot) => {
-          const saved = isSpotSaved(spot.id);
+          {/* スポットカードグリッド */}
+          <div className="spots-grid">
+            {filteredSpots.map((spot) => {
+              const saved = isSpotSaved(spot.id);
           const catInfo = CATEGORY_MAP[spot.category] || CATEGORY_MAP.sightseeing;
           const wanted = spot.wantedMembers || [];
 
           return (
             <div key={spot.id} className="card spot-card">
-              {/* カード画像 */}
-              <div className="spot-image-container">
-                <img 
-                  src={spot.imageUrl} 
-                  alt={spot.name} 
-                  className="spot-image" 
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80';
-                  }}
-                />
-                <span 
-                  className="spot-cat-badge"
-                  style={{ color: catInfo.color, backgroundColor: catInfo.bg }}
-                >
-                  {catInfo.label}
-                </span>
-                <span className="spot-area-badge">
-                  <MapPin size={12} /> {spot.area}
-                </span>
+              {/* カード画像 または 写真なしヘッダー */}
+              {spot.imageUrl ? (
+                <div className="spot-image-container">
+                  <img 
+                    src={spot.imageUrl} 
+                    alt={spot.name} 
+                    className="spot-image" 
+                    loading="lazy"
+                    onError={(e) => {
+                      // エラー時は非表示またはプレースホルダー
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <span 
+                    className="spot-cat-badge"
+                    style={{ color: catInfo.color, backgroundColor: catInfo.bg }}
+                  >
+                    {catInfo.label}
+                  </span>
+                  <span className="spot-area-badge">
+                    <MapPin size={12} /> {spot.area}
+                  </span>
 
-                {/* お気に入りトグルボタン */}
-                <button 
-                  className={`spot-fav-btn ${saved ? 'saved' : ''}`}
-                  onClick={() => onToggleSaveSpot(spot)}
-                  title={saved ? '行きたいリストから外す' : '行きたいリストに追加'}
+                  {/* 写真変更ボタン */}
+                  <button
+                    type="button"
+                    className="spot-photo-change-btn"
+                    onClick={() => setEditingPhotoSpot(spot)}
+                    title="写真を変更する・写真をなしにする"
+                  >
+                    <Camera size={13} /> 写真を変更
+                  </button>
+
+                  {/* お気に入りトグルボタン */}
+                  <button 
+                    className={`spot-fav-btn ${saved ? 'saved' : ''}`}
+                    onClick={() => onToggleSaveSpot(spot)}
+                    title={saved ? '行きたいリストから外す' : '行きたいリストに追加'}
+                  >
+                    <Heart size={18} fill={saved ? '#f43f5e' : 'none'} color={saved ? '#f43f5e' : '#fff'} />
+                  </button>
+                </div>
+              ) : (
+                <div 
+                  className="spot-no-image-header"
+                  style={{
+                    background: `linear-gradient(135deg, ${catInfo.bg} 0%, #f8fafc 100%)`,
+                    borderBottom: `2px solid ${catInfo.color}33`,
+                  }}
                 >
-                  <Heart size={18} fill={saved ? '#f43f5e' : 'none'} color={saved ? '#f43f5e' : '#fff'} />
-                </button>
-              </div>
+                  <div className="no-image-badge-row">
+                    <span 
+                      className="spot-cat-badge"
+                      style={{ color: catInfo.color, backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                    >
+                      {catInfo.label}
+                    </span>
+                    <span className="spot-area-badge" style={{ position: 'static' }}>
+                      <MapPin size={12} /> {spot.area}
+                    </span>
+                  </div>
+
+                  <div className="no-image-actions">
+                    <button
+                      type="button"
+                      className="btn-add-photo-pill"
+                      onClick={() => setEditingPhotoSpot(spot)}
+                      title="写真を追加・設定する（任意）"
+                    >
+                      <Camera size={12} /> 写真を追加
+                    </button>
+                    <button 
+                      className={`spot-fav-btn static ${saved ? 'saved' : ''}`}
+                      onClick={() => onToggleSaveSpot(spot)}
+                      title={saved ? '行きたいリストから外す' : '行きたいリストに追加'}
+                    >
+                      <Heart size={18} fill={saved ? '#f43f5e' : 'none'} color={saved ? '#f43f5e' : '#94a3b8'} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* カード本文 */}
               <div className="spot-card-body">
@@ -399,6 +469,8 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
           <h3>該当するスポットが見つかりませんでした</h3>
           <p>検索条件を変更するか、右上の「行きたい場所を新しく登録」から追加してみてください。</p>
         </div>
+      )}
+      </>
       )}
 
       {/* モーダル: 旅程への追加 */}
@@ -607,6 +679,20 @@ export const SpotExplorer: React.FC<SpotExplorerProps> = ({
           </div>
         </div>
       )}
+
+      {/* 写真編集・変更モーダル */}
+      <PhotoEditorModal
+        isOpen={!!editingPhotoSpot}
+        onClose={() => setEditingPhotoSpot(null)}
+        title={editingPhotoSpot?.name || 'スポット写真'}
+        currentImageUrl={editingPhotoSpot?.imageUrl}
+        onSave={(newUrl) => {
+          if (editingPhotoSpot && onUpdateSpotPhoto) {
+            onUpdateSpotPhoto(editingPhotoSpot.id, newUrl);
+          }
+          setEditingPhotoSpot(null);
+        }}
+      />
     </div>
   );
 };

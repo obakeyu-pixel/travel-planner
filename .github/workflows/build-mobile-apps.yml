@@ -56,10 +56,10 @@ jobs:
           retention-days: 14
 
   # ========================================================
-  # 2. iOS アプリの自動ビルド (クラウドMac / iPhone用)
+  # 2. iOS アプリの自動ビルド ＆ App Store Connect 自動送信
   # ========================================================
   build-ios:
-    name: 🍏 Build iOS App (Cloud macOS)
+    name: 🍏 Build & Upload iOS App to App Store Connect
     runs-on: macos-14
     steps:
       - name: Checkout repository
@@ -70,6 +70,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios/App
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -79,22 +86,19 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx @capacitor/cli sync ios
 
-      - name: Build iOS App with Xcode
+      - name: Build & Upload to App Store Connect
         working-directory: ios/App
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
-          xcodebuild \
-            -project App.xcodeproj \
-            -scheme App \
-            -destination 'generic/platform=iOS' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            build
+          bundle exec fastlane release
 
-      - name: Upload iOS App Build
+      - name: Upload iOS App IPA Artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: iOS-App-Build
-          path: ios/App/build
+          name: iOS-App-IPA
+          path: ios/App/build-output/*.ipa
           retention-days: 14

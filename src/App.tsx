@@ -8,25 +8,21 @@ import {
   Printer, 
   Sparkles, 
   Luggage, 
-  Compass,
   Users,
   BookOpen,
   Share2
 } from 'lucide-react';
 import type { 
   TripPlan, 
-  Spot, 
   ScheduleItem, 
   ChecklistCategory, 
   ExpenseItem, 
-  ScheduleCategory,
   ThemeStyle
 } from './types/travel';
 import type { UserAccount } from './types/auth';
-import { INITIAL_TRIPS, THEME_PRESETS, DEFAULT_CHECKLIST_PRESETS, RECOMMENDED_SPOTS } from './data/sampleData';
-import { getStoredCurrentUser } from './utils/authStorage';
+import { INITIAL_TRIPS, THEME_PRESETS, DEFAULT_CHECKLIST_PRESETS } from './data/sampleData';
+import { getStoredCurrentUser, getPendingInvitationsForUser, addStoredFriend } from './utils/authStorage';
 
-import { SpotExplorer } from './components/SpotExplorer';
 import { TimelineView } from './components/TimelineView';
 import { ChecklistView } from './components/ChecklistView';
 import { BudgetView } from './components/BudgetView';
@@ -35,55 +31,54 @@ import { EditTripModal } from './components/EditTripModal';
 import { TripListModal } from './components/TripListModal';
 import { ShareModal } from './components/ShareModal';
 import { AuthModal } from './components/AuthModal';
+import { GroupManageModal } from './components/GroupManageModal';
+import { WelcomeGate } from './components/WelcomeGate';
 
-import './components/SpotExplorer.css';
 import './components/TimelineView.css';
 import './components/ChecklistView.css';
 import './components/BudgetView.css';
 import './components/PrintView.css';
 import './components/Modals.css';
 
-const TRIPS_STORAGE_KEY = 'tabi_planner_all_trips_v2';
-const CURRENT_TRIP_ID_KEY = 'tabi_planner_current_trip_id_v2';
+import { 
+  APP_VERSION, 
+  CURRENT_TRIPS_STORAGE_KEY, 
+  CURRENT_TRIP_ID_STORAGE_KEY, 
+  checkAndPurgeLegacyData, 
+  forceResetToLatestData 
+} from './utils/versionManager';
 
-type ActiveTab = 'spots' | 'timeline' | 'checklist' | 'budget' | 'print';
+type ActiveTab = 'timeline' | 'checklist' | 'budget' | 'print';
 
 export default function App() {
-  // 全旅行しおりリストの初期化（LocalStorage）
-  const [trips, setTrips] = useState<TripPlan[]>(() => {
-    try {
-      const saved = localStorage.getItem(TRIPS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('LocalStorage読み込みエラー:', e);
-    }
-    return INITIAL_TRIPS;
-  });
+  // アプリ起動時のバージョン検証＆古いデータの自動パージ
+  const [initResult] = useState(() => checkAndPurgeLegacyData());
+
+  // 全旅行しおりリストの初期化（最新データ）
+  const [trips, setTrips] = useState<TripPlan[]>(() => initResult.trips);
 
   // 現在選択中の旅行ID
-  const [currentTripId, setCurrentTripId] = useState<string>(() => {
-    try {
-      const savedId = localStorage.getItem(CURRENT_TRIP_ID_KEY);
-      if (savedId && trips.some((t) => t.id === savedId)) {
-        return savedId;
-      }
-    } catch (e) {}
-    return trips[0]?.id || INITIAL_TRIPS[0].id;
-  });
+  const [currentTripId, setCurrentTripId] = useState<string>(() => initResult.initialTripId);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('spots');
+  // アップデート通知バナー
+  const [updateBannerMessage, setUpdateBannerMessage] = useState<string | null>(() => 
+    initResult.isUpdated 
+      ? `🎉 最新バージョン（v${APP_VERSION}）へアップデートしました！古いデータを消去し、最新の旅行しおりと最新スポット情報に更新しました。`
+      : null
+  );
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>('timeline');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTripListOpen, setIsTripListOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
   // ユーザーアカウント管理
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => getStoredCurrentUser());
+
+  // 未承認の招待リクエスト数
+  const myPendingInvitesCount = currentUser ? getPendingInvitationsForUser(currentUser.id).length : 0;
 
   // スクロール検知（スクロール時にヘッダーを自動でコンパクト化）
   const [isScrolled, setIsScrolled] = useState(false);
@@ -111,6 +106,15 @@ export default function App() {
     }
   };
 
+  // グループメンバー情報の更新
+  const handleUpdateTripMembers = (newMembers: string[], newPendingMembers?: string[]) => {
+    updateCurrentTrip((prev) => ({
+      ...prev,
+      members: newMembers,
+      pendingMembers: newPendingMembers,
+    }));
+  };
+
   // 現在の旅行プランを取得
   const currentTrip = trips.find((t) => t.id === currentTripId) || trips[0] || INITIAL_TRIPS[0];
 
@@ -128,18 +132,30 @@ export default function App() {
     root.style.setProperty('--border-focus', currentTheme.primaryColor);
   }, [currentTheme]);
 
-  // 2. 旅行データの永続化
+  // 2. 旅行データの永続化（バージョン紐付けキーで安全に保存）
   useEffect(() => {
     try {
-      localStorage.setItem(TRIPS_STORAGE_KEY, JSON.stringify(trips));
-      localStorage.setItem(CURRENT_TRIP_ID_KEY, currentTripId);
+      localStorage.setItem(CURRENT_TRIPS_STORAGE_KEY, JSON.stringify(trips));
+      localStorage.setItem(CURRENT_TRIP_ID_STORAGE_KEY, currentTripId);
     } catch (e) {
       console.error('LocalStorage書き込みエラー:', e);
     }
   }, [trips, currentTripId]);
 
-  // 3. URLハッシュからの共有プランの自動読み込み
+  // 手動で古いデータを完全消去して最新データにリフレッシュする処理
+  const handleForceResetData = () => {
+    if (window.confirm('端末に保存されている古い旅行データを消去し、公式の最新しおり・最新スポット情報にリフレッシュしますか？')) {
+      const reset = forceResetToLatestData();
+      setTrips(reset.trips);
+      setCurrentTripId(reset.initialTripId);
+      setUpdateBannerMessage('古い旅行データをすべて消去し、最新データにリフレッシュしました！');
+      setTimeout(() => setUpdateBannerMessage(null), 4500);
+    }
+  };
+
+  // 3. URLハッシュからの共有プラン・友達追加の自動読み込み
   useEffect(() => {
+    // A. 旅行しおりプランの共有インポート
     if (window.location.hash.startsWith('#share=')) {
       try {
         const base64 = window.location.hash.replace('#share=', '');
@@ -160,7 +176,45 @@ export default function App() {
         console.error('共有リンクの復元エラー:', e);
       }
     }
-  }, []);
+
+    // B. QRコードからの友達追加
+    if (window.location.hash.startsWith('#add_friend=')) {
+      try {
+        const base64 = window.location.hash.replace('#add_friend=', '');
+        const jsonStr = decodeURIComponent(atob(base64));
+        const friendData = JSON.parse(jsonStr);
+
+        if (friendData && friendData.username) {
+          addStoredFriend({
+            id: friendData.id || `friend-${Date.now()}`,
+            username: friendData.username,
+            avatarColor: friendData.avatarColor || '#0284c7',
+          });
+
+          const shouldAddToTrip = window.confirm(
+            `🤝「${friendData.username}」さんを友達に追加しました！\n\n現在選択中の旅行「${currentTrip.title}」のメンバー（旅行グループ）にも追加しますか？`
+          );
+
+          if (shouldAddToTrip) {
+            updateCurrentTrip((prev) => {
+              if (!prev.members.includes(friendData.username)) {
+                return {
+                  ...prev,
+                  members: [...prev.members, friendData.username],
+                };
+              }
+              return prev;
+            });
+          }
+
+          window.location.hash = '';
+          setIsGroupModalOpen(true);
+        }
+      } catch (e) {
+        console.error('友達追加リンクの解析エラー:', e);
+      }
+    }
+  }, [currentTrip.title]);
 
   // カレントプランを更新するヘルパー関数
   const updateCurrentTrip = (updater: (prev: TripPlan) => TripPlan) => {
@@ -185,12 +239,12 @@ export default function App() {
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
       totalDays: 2,
-      coverImage: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&q=80',
+      coverImage: undefined, // デフォルト写真なし（伝統柄・テーマグラデーション背景）
       themeId: 'trad-kyoto',
       themeKeyword: '',
-      members: ['自分'],
+      members: currentUser ? [currentUser.username] : ['自分'],
       memo: 'どんな旅行にするかメモを書きましょう！',
-      totalBudget: 50000,
+      totalBudget: 0,
       savedSpots: [],
       schedules: [],
       checklists: [
@@ -231,98 +285,6 @@ export default function App() {
       }
       return filtered;
     });
-  };
-
-  // ==========================================
-  // スポット関連ハンドラ
-  // ==========================================
-  const handleToggleSaveSpot = (spot: Spot) => {
-    updateCurrentTrip((prev) => {
-      const isAlreadySaved = prev.savedSpots.some((s) => s.id === spot.id);
-      let updatedSaved: Spot[];
-      if (isAlreadySaved) {
-        updatedSaved = prev.savedSpots.filter((s) => s.id !== spot.id);
-      } else {
-        updatedSaved = [...prev.savedSpots, { ...spot, isSaved: true }];
-      }
-      return { ...prev, savedSpots: updatedSaved };
-    });
-  };
-
-  const handleAddCustomSpot = (spot: Spot) => {
-    updateCurrentTrip((prev) => ({
-      ...prev,
-      savedSpots: [...prev.savedSpots, spot],
-    }));
-  };
-
-  const handleToggleMemberVote = (spotId: string, memberName: string) => {
-    updateCurrentTrip((prev) => {
-      const isAlreadySaved = prev.savedSpots.some((s) => s.id === spotId);
-
-      if (isAlreadySaved) {
-        // すでに保存済みの場合、該当スポットの投票メンバーをトグル
-        const updatedSavedSpots = prev.savedSpots.map((s) => {
-          if (s.id !== spotId) return s;
-          const currentWanted = s.wantedMembers || [];
-          const isVoted = currentWanted.includes(memberName);
-          const newWanted = isVoted
-            ? currentWanted.filter((m) => m !== memberName)
-            : [...currentWanted, memberName];
-          return { ...s, wantedMembers: newWanted };
-        });
-
-        return {
-          ...prev,
-          savedSpots: updatedSavedSpots,
-        };
-      } else {
-        // 未保存のおすすめスポットの場合、マスターデータから取得して投票済みとして行きたいリストに追加
-        const masterSpot = RECOMMENDED_SPOTS.find((s) => s.id === spotId);
-        if (!masterSpot) return prev;
-
-        const newSavedSpot: Spot = {
-          ...masterSpot,
-          isSaved: true,
-          wantedMembers: [memberName],
-        };
-
-        return {
-          ...prev,
-          savedSpots: [...prev.savedSpots, newSavedSpot],
-        };
-      }
-    });
-  };
-
-  const handleAddToSchedule = (
-    spot: Spot, 
-    dayNumber: number, 
-    time: string, 
-    category: ScheduleCategory
-  ) => {
-    const newItem: ScheduleItem = {
-      id: `sch-${Date.now()}`,
-      dayNumber,
-      time,
-      category,
-      title: spot.name,
-      location: spot.address || spot.area,
-      memo: spot.tips || spot.description,
-      cost: spot.estimatedBudget.includes('無料') ? 0 : undefined,
-    };
-
-    updateCurrentTrip((prev) => {
-      const isAlreadySaved = prev.savedSpots.some((s) => s.id === spot.id);
-      const updatedSaved = isAlreadySaved ? prev.savedSpots : [...prev.savedSpots, { ...spot, isSaved: true }];
-      return {
-        ...prev,
-        savedSpots: updatedSaved,
-        schedules: [...prev.schedules, newItem],
-      };
-    });
-
-    setActiveTab('timeline');
   };
 
   // ==========================================
@@ -468,8 +430,64 @@ export default function App() {
     setCurrentTripId(newId);
   };
 
+  // 未ログイン時：起動時「ログイン / 新規登録」ウェルカムゲート画面を表示
+  if (!currentUser) {
+    return (
+      <WelcomeGate 
+        onLoginSuccess={(user) => {
+          handleUserChange(user);
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="app-container">
+      {/* アップデート・データ刷新お知らせバナー */}
+      {updateBannerMessage && (
+        <div 
+          className="update-notification-banner"
+          style={{
+            background: 'linear-gradient(135deg, #0d9488, #059669)',
+            color: '#fff',
+            padding: '10px 16px',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            zIndex: 101,
+            position: 'sticky',
+            top: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={18} />
+            <span>{updateBannerMessage}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setUpdateBannerMessage(null)}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: '#fff',
+              borderRadius: '50%',
+              width: '24px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontWeight: 800,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* サイト上部バー */}
       <header className={`site-header ${isScrolled ? 'header-compact' : ''}`}>
         <div className="header-inner">
@@ -484,33 +502,34 @@ export default function App() {
           </div>
 
           <div className="header-actions">
-            {/* テーマから自動作成ボタン（目立たせる） */}
+            {/* 1. マイしおりアルバム一覧ボタン（スマホ＆PC最重要） */}
             <button 
-              className="btn btn-primary btn-sm header-action-btn header-btn-primary"
-              onClick={() => setIsEditModalOpen(true)}
-              title="テーマを入力してプラン・旅程・持ち物・スポットを一括自動作成"
+              className="btn btn-secondary btn-sm header-action-btn header-btn-bookmark"
+              onClick={() => setIsTripListOpen(true)}
+              title="保存された旅行のしおり一覧を開く"
             >
-              <Sparkles size={15} />
-              <span className="btn-label-desktop">テーマ自動作成</span>
-              <span className="btn-label-mobile">自動作成</span>
+              <BookOpen size={16} />
+              <span className="btn-label-desktop">マイしおり ({trips.length})</span>
+              <span className="btn-label-mobile">しおり ({trips.length})</span>
             </button>
 
-            {/* アカウント設定・切り替えボタン */}
+            {/* 2. アカウント設定・切り替えボタン（スマホ＆PC最重要） */}
             <button 
-              className="btn btn-secondary btn-sm header-action-btn"
+              className="btn btn-secondary btn-sm header-action-btn header-btn-account"
               onClick={() => setIsAuthModalOpen(true)}
               title="アカウント設定・ユーザー切り替え"
+              style={{ position: 'relative' }}
             >
               {currentUser ? (
                 <>
                   <span 
                     style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '22px',
+                      height: '22px',
                       borderRadius: '50%',
                       backgroundColor: currentUser.avatarColor,
                       color: '#fff',
-                      fontSize: '0.72rem',
+                      fontSize: '0.74rem',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -520,40 +539,60 @@ export default function App() {
                     {currentUser.username.slice(0, 1)}
                   </span>
                   <span className="btn-label-desktop">{currentUser.username}</span>
+                  <span className="btn-label-mobile">{currentUser.username}</span>
                 </>
               ) : (
                 <>
-                  <Users size={15} />
+                  <Users size={16} />
                   <span className="btn-label-desktop">アカウント</span>
+                  <span className="btn-label-mobile">アカウント</span>
                 </>
+              )}
+              {/* 未承認の招待通知バッジ */}
+              {myPendingInvitesCount > 0 && (
+                <span className="account-notification-badge" title={`${myPendingInvitesCount}件のグループ招待が届いています`}>
+                  {myPendingInvitesCount}
+                </span>
               )}
             </button>
 
-            {/* しおりアルバム一覧ボタン */}
-            <button 
-              className="btn btn-secondary btn-sm header-action-btn"
-              onClick={() => setIsTripListOpen(true)}
-              title="保存された旅行のしおり一覧を開く"
-            >
-              <BookOpen size={15} />
-              <span className="btn-label-desktop">マイしおり ({trips.length})</span>
-              <span className="btn-label-mobile">しおり ({trips.length})</span>
-            </button>
-
-            {/* スマホで開く＆共有ボタン */}
+            {/* 3. スマホで開く＆共有ボタン */}
             <button 
               className="btn btn-secondary btn-sm header-action-btn"
               onClick={() => setIsShareModalOpen(true)}
               title="共有リンク・QRコード"
             >
-              <Share2 size={15} />
+              <Share2 size={16} />
               <span className="btn-label-desktop">スマホで開く</span>
               <span className="btn-label-mobile">共有</span>
             </button>
 
-            {/* 旅の設定ボタン */}
+            {/* 4. テーマから自動作成ボタン（PC優先・スマホではヒーローからワンタップ） */}
             <button 
-              className="btn btn-secondary btn-sm header-action-btn"
+              className="btn btn-primary btn-sm header-action-btn header-btn-primary header-desktop-only"
+              onClick={() => setIsEditModalOpen(true)}
+              title="テーマを入力してプラン・旅程・持ち物・スポットを一括自動作成"
+            >
+              <Sparkles size={15} />
+              <span className="btn-label-desktop">テーマ自動作成</span>
+            </button>
+
+            {/* 5. グループ管理・友達招待ボタン（PC優先・スマホではボトムナビ＆ヒーローからワンタップ） */}
+            <button
+              className="btn btn-secondary btn-sm header-action-btn header-desktop-only"
+              onClick={() => setIsGroupModalOpen(true)}
+              title="LINE風旅行グループ管理＆友達検索・招待"
+            >
+              <Users size={15} />
+              <span className="btn-label-desktop">グループ ({currentTrip.members.length})</span>
+              {(currentTrip.pendingMembers?.length || 0) > 0 && (
+                <span className="badge-mini-dot" title="承認待ちの招待があります" />
+              )}
+            </button>
+
+            {/* 6. 旅の設定ボタン（PC優先・スマホではヒーローからワンタップ） */}
+            <button 
+              className="btn btn-secondary btn-sm header-action-btn header-desktop-only"
               onClick={() => setIsEditModalOpen(true)}
               title="テーマカラー・柄や旅行情報の編集"
             >
@@ -561,14 +600,13 @@ export default function App() {
               <span className="btn-label-desktop">設定</span>
             </button>
 
-            {/* しおり印刷ビュー切替 */}
+            {/* 7. しおり印刷ビュー切替（PC優先） */}
             <button 
-              className="btn btn-outline btn-sm header-action-btn no-print"
+              className="btn btn-outline btn-sm no-print header-action-btn header-desktop-only"
               onClick={() => setActiveTab(activeTab === 'print' ? 'timeline' : 'print')}
             >
               <Printer size={15} />
               <span className="btn-label-desktop">{activeTab === 'print' ? '編集に戻る' : '完成しおり'}</span>
-              <span className="btn-label-mobile">{activeTab === 'print' ? '戻る' : '完成'}</span>
             </button>
           </div>
         </div>
@@ -604,12 +642,24 @@ export default function App() {
                     <Calendar size={16} />
                     <span>{currentTrip.startDate} 〜 {currentTrip.endDate} ({currentTrip.totalDays}日間)</span>
                   </div>
-                  {currentTrip.members && currentTrip.members.length > 0 && (
-                    <div className="trip-meta-item">
-                      <Users size={16} />
-                      <span>{currentTrip.members.join('・')}</span>
-                    </div>
-                  )}
+                  <div 
+                    className="trip-meta-item trip-meta-clickable"
+                    onClick={() => setIsGroupModalOpen(true)}
+                    title="クリックしてグループメンバーを管理・友達を招待"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Users size={16} />
+                    <span>
+                      {currentTrip.members && currentTrip.members.length > 0 
+                        ? currentTrip.members.join('・') 
+                        : 'メンバー未登録'}
+                    </span>
+                    {(currentTrip.pendingMembers?.length || 0) > 0 && (
+                      <span className="badge-pending-pill" style={{ marginLeft: '6px', fontSize: '0.72rem', background: 'rgba(255, 193, 7, 0.3)', color: '#ffd54f', padding: '2px 8px', borderRadius: '12px' }}>
+                        {currentTrip.pendingMembers?.length}名承認待ち
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {currentTrip.memo && (
                   <div className="trip-memo-box">
@@ -625,14 +675,22 @@ export default function App() {
                   onClick={() => setIsEditModalOpen(true)}
                   title="テーマからプラン一式を自動作成"
                 >
-                  <Sparkles size={14} /> テーマからプランを自動作成
+                  <Sparkles size={14} /> テーマ自動作成
+                </button>
+                <button 
+                  className="btn btn-secondary btn-sm"
+                  style={{ background: 'rgba(255, 255, 255, 0.25)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => setIsGroupModalOpen(true)}
+                  title="LINE風旅行グループ管理＆友達招待"
+                >
+                  <Users size={14} /> グループ・友達招待
                 </button>
                 <button 
                   className="btn btn-secondary btn-sm" 
-                  style={{ background: 'rgba(255, 255, 255, 0.25)', color: '#fff', border: 'none' }}
+                  style={{ background: 'rgba(255, 255, 255, 0.18)', color: '#fff', border: 'none' }}
                   onClick={() => setIsEditModalOpen(true)}
                 >
-                  <Settings size={14} /> テーマや基本情報を変更
+                  <Settings size={14} /> 基本設定
                 </button>
               </div>
             </div>
@@ -641,16 +699,6 @@ export default function App() {
           {/* メインタブバー */}
           <nav className="nav-tabs-wrapper">
             <div className="nav-tabs">
-              <button
-                className={`nav-tab-btn ${activeTab === 'spots' ? 'active' : ''}`}
-                onClick={() => setActiveTab('spots')}
-              >
-                <Compass size={18} />
-                <span className="tab-text-full">どこ行く？（スポット）</span>
-                <span className="tab-text-short">スポット</span>
-                <span className="nav-tab-badge">{currentTrip.savedSpots?.length || 0}</span>
-              </button>
-
               <button
                 className={`nav-tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
                 onClick={() => setActiveTab('timeline')}
@@ -689,18 +737,6 @@ export default function App() {
 
           {/* メインコンテンツ切り替え */}
           <main className="main-content">
-            {activeTab === 'spots' && (
-              <SpotExplorer
-                savedSpots={currentTrip.savedSpots || []}
-                members={currentTrip.members || ['自分']}
-                onToggleSaveSpot={handleToggleSaveSpot}
-                onAddCustomSpot={handleAddCustomSpot}
-                onAddToSchedule={handleAddToSchedule}
-                onToggleMemberVote={handleToggleMemberVote}
-                totalDays={currentTrip.totalDays}
-              />
-            )}
-
             {activeTab === 'timeline' && (
               <TimelineView
                 schedules={currentTrip.schedules || []}
@@ -736,20 +772,18 @@ export default function App() {
             )}
           </main>
 
-          {/* スマホ専用 固定ボトムナビゲーションバー（ワンタップ切り替え・横スクロール不要） */}
+          {/* スマホ専用 固定ボトムナビゲーションバー（ワンタップ切り替え・横スクロール不要・親指で全機能にアクセス） */}
           <nav className="mobile-bottom-nav no-print">
             <button
-              className={`bottom-nav-item ${activeTab === 'spots' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('spots'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              title="おすすめスポット"
+              className="bottom-nav-item"
+              onClick={() => setIsTripListOpen(true)}
+              title="保存されたしおり一覧"
             >
               <div className="bottom-nav-icon-wrap">
-                <Compass size={21} />
-                {(currentTrip.savedSpots?.length || 0) > 0 && (
-                  <span className="bottom-nav-badge">{currentTrip.savedSpots?.length}</span>
-                )}
+                <BookOpen size={20} />
+                <span className="bottom-nav-badge">{trips.length}</span>
               </div>
-              <span className="bottom-nav-label">スポット</span>
+              <span className="bottom-nav-label">しおり</span>
             </button>
 
             <button
@@ -758,7 +792,7 @@ export default function App() {
               title="旅程タイムライン"
             >
               <div className="bottom-nav-icon-wrap">
-                <Calendar size={21} />
+                <Calendar size={20} />
                 {(currentTrip.schedules?.length || 0) > 0 && (
                   <span className="bottom-nav-badge">{currentTrip.schedules?.length}</span>
                 )}
@@ -767,12 +801,28 @@ export default function App() {
             </button>
 
             <button
+              className="bottom-nav-item"
+              onClick={() => setIsGroupModalOpen(true)}
+              title="LINE風グループ管理・友達招待"
+            >
+              <div className="bottom-nav-icon-wrap">
+                <Users size={20} />
+                {(myPendingInvitesCount > 0 || (currentTrip.pendingMembers?.length || 0) > 0) && (
+                  <span className="bottom-nav-badge badge-alert">
+                    {myPendingInvitesCount || currentTrip.pendingMembers?.length}
+                  </span>
+                )}
+              </div>
+              <span className="bottom-nav-label">グループ</span>
+            </button>
+
+            <button
               className={`bottom-nav-item ${activeTab === 'checklist' ? 'active' : ''}`}
               onClick={() => { setActiveTab('checklist'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               title="持ち物・準備ToDo"
             >
               <div className="bottom-nav-icon-wrap">
-                <CheckSquare size={21} />
+                <CheckSquare size={20} />
                 <span className="bottom-nav-badge">
                   {currentTrip.checklists?.filter((c) => c.isDone).length || 0}/{currentTrip.checklists?.length || 0}
                 </span>
@@ -786,7 +836,7 @@ export default function App() {
               title="費用・予算管理"
             >
               <div className="bottom-nav-icon-wrap">
-                <Coins size={21} />
+                <Coins size={20} />
                 {(currentTrip.expenses?.length || 0) > 0 && (
                   <span className="bottom-nav-badge">
                     ¥{Math.round((currentTrip.expenses || []).reduce((s, e) => s + e.amount, 0) / 1000)}k
@@ -809,6 +859,7 @@ export default function App() {
         onCreateNewTrip={handleCreateNewTrip}
         onDuplicateTrip={handleDuplicateTrip}
         onDeleteTrip={handleDeleteTrip}
+        onResetToLatest={handleForceResetData}
       />
 
       {/* 2. スマホQRコード＆グループ共有モーダル */}
@@ -825,6 +876,7 @@ export default function App() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveTripInfo}
+        onResetToSample={handleForceResetData}
       />
 
       {/* 4. アカウント設定・ユーザー切り替えモーダル */}
@@ -833,6 +885,16 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         currentUser={currentUser}
         onUserChange={handleUserChange}
+      />
+
+      {/* 5. 旅行グループ管理＆友達QRコード交換モーダル */}
+      <GroupManageModal
+        tripPlan={currentTrip}
+        currentUser={currentUser}
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        onUpdateTripMembers={(newMembers) => handleUpdateTripMembers(newMembers)}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
       />
     </div>
   );

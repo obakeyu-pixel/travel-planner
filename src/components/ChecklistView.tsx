@@ -143,7 +143,7 @@ export const ChecklistView: React.FC<ChecklistViewProps> = ({
           </select>
           <input 
             type="text" 
-            placeholder="新しい持ち物や準備タスクを入力（例: モバイルバッテリー、新幹線の予約）" 
+            placeholder="新しい持ち物や準備タスクを入力" 
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             className="form-control item-input"

@@ -633,48 +633,99 @@ input, textarea, select {
     display: inline !important;
   }
 
-  /* ヘッダーのスマホ最適化 */
+  /* デスクトップ専用ボタンをスマホで非表示（しおり＆アカウントが絶対に隠れないようにする） */
+  .header-desktop-only {
+    display: none !important;
+  }
+
+  /* ヘッダーのスマホ最適化（画面外へのはみ出し・隠れを完全根絶） */
+  .site-header {
+    padding-top: env(safe-area-inset-top);
+  }
+
   .header-inner {
-    padding: 8px 10px;
+    padding: 8px 12px;
     gap: 8px;
     flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .brand-logo {
-    font-size: 1rem;
-    gap: 6px;
+    font-size: 1.05rem;
+    gap: 8px;
     flex-shrink: 0;
   }
 
   .brand-icon-wrap {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
   }
 
   .brand-subtitle {
     display: none;
   }
 
+  /* ヘッダーボタン群：横スクロールを排除し、画面幅内に100%確実に収まる */
   .header-actions {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     align-items: center;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
+    flex-shrink: 0;
   }
 
-  .header-actions::-webkit-scrollbar {
-    display: none;
-  }
-
+  /* スマホでのタッチ操作性（Apple推奨44px前後のタップ領域・指で確実に触れる） */
   .header-action-btn {
-    padding: 5px 8px;
-    font-size: 0.74rem;
+    padding: 7px 11px;
+    min-height: 40px;
+    font-size: 0.8rem;
+    font-weight: 700;
     white-space: nowrap;
     flex-shrink: 0;
-    gap: 4px;
+    gap: 5px;
+    border-radius: 20px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .header-action-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* しおりボタン（スマホで超押しやすく） */
+  .header-btn-bookmark {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #1e293b;
+  }
+
+  /* アカウントボタン（スマホで超押しやすく＆アバター表示） */
+  .header-btn-account {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    padding: 5px 10px;
+  }
+
+  /* 未読通知バッジ（スマホヘッダー） */
+  .account-notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   }
 
   /* ヒーローバナーのスマホ最適化 */
@@ -806,6 +857,12 @@ input, textarea, select {
     border-radius: 9999px;
     line-height: 1;
     border: 1.5px solid #fff;
+  }
+
+  .bottom-nav-badge.badge-alert {
+    background: #f59e0b;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
   }
 
   /* メインコンテンツ幅の100%フィット & ボトムバー被り防止パディング */

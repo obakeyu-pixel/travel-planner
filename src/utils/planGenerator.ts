@@ -72,7 +72,7 @@ export const POPULAR_THEMES: ThemePresetOption[] = [
  */
 export function generateTripPlanFromTheme(
   themeInput: string,
-  existingMembers: string[] = ['けんた', 'さくら']
+  existingMembers: string[] = ['自分']
 ): Omit<TripPlan, 'id'> {
   const keyword = themeInput.trim();
   const lower = keyword.toLowerCase();
@@ -99,7 +99,6 @@ export function generateTripPlanFromTheme(
         area: '箱根',
         category: 'gourmet',
         description: '名物のちもと「湯もち」や揚げかまぼこを食べ歩きできる温泉街。',
-        imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&q=80',
         recommendedDuration: '約1.5時間',
         estimatedBudget: '約1,000円',
         address: '神奈川県足柄下郡箱根町湯本',
@@ -115,7 +114,6 @@ export function generateTripPlanFromTheme(
         area: '箱根',
         category: 'sightseeing',
         description: '3000年前の火山活動の名残を今に伝える、湯けむり立ち上る名勝。',
-        imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&q=80',
         recommendedDuration: '約1時間',
         estimatedBudget: '約500円（黒たまご）',
         address: '神奈川県足柄下郡箱根町仙石原1251',
@@ -131,7 +129,6 @@ export function generateTripPlanFromTheme(
         area: '箱根',
         category: 'activity',
         description: '広大な庭園に近代・現代の名作彫刻が展示された日本初の野外美術館。',
-        imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&q=80',
         recommendedDuration: '約2時間',
         estimatedBudget: '入場料 1,600円',
         address: '神奈川県足柄下郡箱根町二ノ平1121',
@@ -255,7 +252,7 @@ export function generateTripPlanFromTheme(
       startDate,
       endDate,
       totalDays,
-      coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&q=80',
+      coverImage: undefined, // デフォルト写真なし
       themeId: 'onsen-warm',
       themeKeyword: keyword || '温泉 旅館 癒やし',
       members: existingMembers,
@@ -277,7 +274,6 @@ export function generateTripPlanFromTheme(
         area: '沖縄・本部',
         category: 'sightseeing',
         description: '世界最大級の巨大水槽「黒潮の海」を泳ぐジンベエザメやナンヨウマンタが大迫力！',
-        imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80',
         recommendedDuration: '約2.5時間',
         estimatedBudget: '入館料 2,180円',
         address: '沖縄県国頭郡本部町字石川424',
@@ -293,7 +289,6 @@ export function generateTripPlanFromTheme(
         area: '沖縄・今帰仁',
         category: 'nature',
         description: 'エメラルドグリーンの海上を約2km一直線に渡る爽快絶景ドライブウェイ。',
-        imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
         recommendedDuration: '約1.5時間',
         estimatedBudget: '通行無料',
         address: '沖縄県国頭郡今帰仁村古宇利',
@@ -400,7 +395,7 @@ export function generateTripPlanFromTheme(
       startDate,
       endDate,
       totalDays,
-      coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
+      coverImage: undefined, // デフォルト写真なし
       themeId: 'ocean-blue',
       themeKeyword: keyword || '沖縄 海 リゾート ドライブ',
       members: existingMembers,
@@ -422,7 +417,6 @@ export function generateTripPlanFromTheme(
         area: '小樽',
         category: 'sightseeing',
         description: 'レトロなガス灯と石造り倉庫が並ぶロマンチックな小樽運河と絶品ドゥーブルフロマージュ。',
-        imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&q=80',
         recommendedDuration: '約2時間',
         estimatedBudget: '約1,500円（スイーツ）',
         address: '北海道小樽市港町5',
@@ -437,7 +431,6 @@ export function generateTripPlanFromTheme(
         area: '札幌',
         category: 'gourmet',
         description: 'ウニ・イクラ・ホタテ・カニがこぼれんばかりに盛られた贅沢海鮮丼！',
-        imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=800&q=80',
         recommendedDuration: '約1時間',
         estimatedBudget: '約3,000円',
         address: '北海道札幌市中央区南3条東1丁目',
@@ -533,7 +526,7 @@ export function generateTripPlanFromTheme(
       startDate,
       endDate,
       totalDays,
-      coverImage: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&q=80',
+      coverImage: undefined, // デフォルト写真なし
       themeId: 'nature-forest',
       themeKeyword: keyword || '北海道 海鮮 グルメ 自然',
       members: existingMembers,
@@ -558,7 +551,7 @@ export function generateTripPlanFromTheme(
     startDate,
     endDate,
     totalDays,
-    coverImage: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&q=80',
+    coverImage: undefined, // デフォルト写真なし
     themeId: themeStyle.id,
     themeKeyword: keyword || '京都 和風 伝統 散策',
     members: existingMembers,

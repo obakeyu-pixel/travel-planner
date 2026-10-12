@@ -64,7 +64,7 @@ export interface Spot {
   area: string;
   category: SpotCategory;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;          // スポット写真URL（未設定・写真なしも可能）
   recommendedDuration: string; // 例: "約1〜2時間"
   estimatedBudget: string;     // 例: "約1,000円〜"
   address?: string;            // 住所
@@ -122,10 +122,13 @@ export interface TripPlan {
   startDate: string;          // YYYY-MM-DD
   endDate: string;            // YYYY-MM-DD
   totalDays: number;          // 旅行日数
-  coverImage: string;
+  coverImage?: string;        // カバー写真URL（写真なしの場合は伝統柄＆グラデーション）
   themeId: string;            // 適用テーマID
   themeKeyword?: string;      // ユーザーが入力したテーマ
-  members: string[];          // 同行者名一覧
+  ownerId?: string;           // しおり/グループの作成者ID
+  ownerName?: string;         // しおり/グループの作成者名
+  members: string[];          // 同行者・グループ参加確定メンバー一覧
+  pendingMembers?: string[];  // 招待中・承認待ちのメンバー名一覧
   memo: string;
   savedSpots: Spot[];         // 行きたいリスト
   schedules: ScheduleItem[];  // 旅程タイムライン

@@ -177,7 +177,81 @@
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
+.spot-photo-change-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.spot-photo-change-btn:hover {
+  background: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* 写真なしヘッダー */
+.spot-no-image-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.no-image-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.no-image-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-add-photo-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all var(--transition-fast);
+}
+
+.btn-add-photo-pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.spot-fav-btn.static {
+  position: static;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.spot-fav-btn.static:hover {
+  background: #fff1f2;
 }
 
 .spot-fav-btn {

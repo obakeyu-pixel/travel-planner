@@ -6,7 +6,8 @@ import {
   Trash2, 
   Calendar, 
   MapPin, 
-  CheckCircle2
+  CheckCircle2,
+  RotateCcw
 } from 'lucide-react';
 import type { TripPlan } from '../types/travel';
 
@@ -19,6 +20,7 @@ interface TripListModalProps {
   onCreateNewTrip: () => void;
   onDuplicateTrip: (tripId: string) => void;
   onDeleteTrip: (tripId: string) => void;
+  onResetToLatest?: () => void;
 }
 
 export const TripListModal: React.FC<TripListModalProps> = ({
@@ -30,6 +32,7 @@ export const TripListModal: React.FC<TripListModalProps> = ({
   onCreateNewTrip,
   onDuplicateTrip,
   onDeleteTrip,
+  onResetToLatest,
 }) => {
   if (!isOpen) return null;
 
@@ -75,11 +78,30 @@ export const TripListModal: React.FC<TripListModalProps> = ({
                     onClose();
                   }}
                 >
-                  <img 
-                    src={trip.coverImage || 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&q=80'} 
-                    alt="" 
-                    className="trip-album-thumb"
-                  />
+                  {trip.coverImage ? (
+                    <img 
+                      src={trip.coverImage} 
+                      alt="" 
+                      className="trip-album-thumb"
+                    />
+                  ) : (
+                    <div 
+                      className="trip-album-thumb-placeholder"
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #0d9488 0%, #134e4a 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <BookOpen size={24} />
+                    </div>
+                  )}
                   <div className="trip-album-info">
                     <div className="trip-album-top">
                       <h4 className="trip-album-title">{trip.title}</h4>
@@ -130,7 +152,22 @@ export const TripListModal: React.FC<TripListModalProps> = ({
           </div>
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          {onResetToLatest && (
+            <button 
+              type="button"
+              className="btn btn-outline btn-sm"
+              style={{ color: '#e11d48', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+              onClick={() => {
+                onResetToLatest();
+                onClose();
+              }}
+              title="古い旅行データを端末から消去し、公式の最新しおり・スポット情報にリフレッシュします"
+            >
+              <RotateCcw size={14} />
+              最新データにリフレッシュ（古いデータを消去）
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={onClose}>閉じる</button>
         </div>
       </div>

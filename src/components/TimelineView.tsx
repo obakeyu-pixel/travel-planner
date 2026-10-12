@@ -336,7 +336,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   <input 
                     type="text" 
                     required
-                    placeholder="例: 嵐山 竹林の小径を散策、錦市場でランチ"
+                    placeholder="予定のタイトルを入力"
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     className="form-control"
@@ -382,7 +382,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     <label className="form-label">費用目安（円）</label>
                     <input 
                       type="number" 
-                      placeholder="例: 2000"
+                      placeholder="金額を入力（円）"
                       value={formCost}
                       onChange={(e) => setFormCost(e.target.value)}
                       className="form-control"
@@ -394,7 +394,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   <label className="form-label">場所・アクセス</label>
                   <input 
                     type="text" 
-                    placeholder="例: JR京都駅、京都市右京区嵯峨野"
+                    placeholder="場所や住所を入力"
                     value={formLocation}
                     onChange={(e) => setFormLocation(e.target.value)}
                     className="form-control"
@@ -420,7 +420,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     <label className="form-label">移動時間</label>
                     <input 
                       type="text" 
-                      placeholder="例: 徒歩15分、電車30分"
+                      placeholder="移動時間を入力"
                       value={formTransportDuration}
                       onChange={(e) => setFormTransportDuration(e.target.value)}
                       className="form-control"

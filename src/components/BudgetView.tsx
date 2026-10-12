@@ -208,7 +208,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
               <input 
                 type="text" 
                 required
-                placeholder="例: 新幹線チケット、ディナー代、ホテル宿泊費"
+                placeholder="費用の項目名・使途を入力"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 className="form-control"
@@ -220,7 +220,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                 type="number" 
                 required
                 min="1"
-                placeholder="例: 5500"
+                placeholder="金額を入力（円）"
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
                 className="form-control"
@@ -245,7 +245,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
               <label className="form-label">メモ（任意）</label>
               <input 
                 type="text" 
-                placeholder="例: 早割利用、現地払い予定など"
+                placeholder="備考やメモを入力"
                 value={newMemo}
                 onChange={(e) => setNewMemo(e.target.value)}
                 className="form-control"

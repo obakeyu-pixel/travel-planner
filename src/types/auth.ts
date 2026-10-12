@@ -4,18 +4,41 @@
 
 export interface UserAccount {
   id: string;
-  username: string;          // 表示名（例: "けんた", "さくら"）
+  username: string;          // 表示名（例: "たろう", "花子"）
   email: string;             // ログインID / メールアドレス
-  password: string;          // パスワード（平文/ハッシュ）
+  password?: string;         // パスワード（ソーシャルログイン時は不要）
   avatarColor: string;       // アイコン背景色
-  secretQuestion: string;    // パスワード再設定用の秘密の質問
-  secretAnswer: string;      // 秘密の質問の答え
+  provider?: 'password' | 'apple' | 'google'; // 認証プロバイダ
+  secretQuestion?: string;   // パスワード再設定用の秘密の質問
+  secretAnswer?: string;     // 秘密の質問の答え
+  needsProfileSetup?: boolean; // 初回ニックネーム設定が必要かどうか
   createdAt: string;
 }
 
 export interface AuthState {
   currentUser: UserAccount | null;
   users: UserAccount[];
+}
+
+// QRコード交換で追加された友達プロフィールの型定義
+export interface FriendProfile {
+  id: string;
+  username: string;
+  avatarColor: string;
+  addedAt: string;
+}
+
+// LINE風グループ招待＆相互承認の型定義
+export interface GroupInvitation {
+  id: string;
+  tripId: string;
+  tripTitle: string;
+  inviterId: string;
+  inviterName: string;
+  inviteeId: string;
+  inviteeName: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
 }
 
 // 秘密の質問の選択肢プリセット

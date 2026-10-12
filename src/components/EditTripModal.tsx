@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Palette, Sparkles, Users } from 'lucide-react';
+import { Palette, Sparkles, Users, Camera } from 'lucide-react';
 import type { TripPlan } from '../types/travel';
 import { THEME_PRESETS, detectThemeByKeyword } from '../data/sampleData';
-import { POPULAR_THEMES, generateTripPlanFromTheme } from '../utils/planGenerator';
+import { generateTripPlanFromTheme } from '../utils/planGenerator';
+import { PhotoEditorModal } from './PhotoEditorModal';
 
 interface EditTripModalProps {
   tripPlan: TripPlan;
@@ -27,6 +28,8 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
   const [memo, setMemo] = useState(tripPlan.memo);
   const [selectedThemeId, setSelectedThemeId] = useState(tripPlan.themeId || 'trad-kyoto');
   const [themeKeyword, setThemeKeyword] = useState(tripPlan.themeKeyword || '');
+  const [coverImage, setCoverImage] = useState<string | undefined>(tripPlan.coverImage);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -41,9 +44,14 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
 
   // テーマからプラン全体（旅程・持ち物・スポット・予算）を一括自動生成して適用
   const handleAutoGeneratePlan = (keywordToUse: string) => {
-    const targetKw = keywordToUse.trim() || '温泉 癒やし';
+    const targetKw = keywordToUse.trim();
+    if (!targetKw) {
+      alert('旅行のテーマや行き先キーワードを入力してください。');
+      return;
+    }
     const memberList = members.split(',').map((m) => m.trim()).filter(Boolean);
-    const generated = generateTripPlanFromTheme(targetKw, memberList.length > 0 ? memberList : ['けんた', 'さくら']);
+    const defaultMembers = memberList.length > 0 ? memberList : (tripPlan.members.length > 0 ? tripPlan.members : ['自分']);
+    const generated = generateTripPlanFromTheme(targetKw, defaultMembers);
 
     // フォームフィールドを更新
     setTitle(generated.title);
@@ -56,10 +64,10 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
     setThemeKeyword(generated.themeKeyword || targetKw);
 
     // ユーザーに確認してプラン全体を即時反映
-    if (window.confirm(`「${targetKw}」のテーマに合わせて、タイトル・旅程スケジュール・スポット・持ち物・予算を一括自動作成しました！\n\n今すぐ旅行しおり全体に反映しますか？`)) {
+    if (window.confirm(`「${targetKw}」のテーマに合わせて、タイトル・旅程スケジュール・持ち物・予算を一括自動作成しました！\n\n今すぐ旅行しおり全体に反映しますか？`)) {
       onSave({
         ...generated,
-        members: memberList.length > 0 ? memberList : ['けんた', 'さくら'],
+        members: defaultMembers,
       });
       onClose();
     }
@@ -77,6 +85,7 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
       memo: memo.trim(),
       themeId: selectedThemeId,
       themeKeyword: themeKeyword.trim(),
+      coverImage: coverImage,
     });
     onClose();
   };
@@ -97,19 +106,19 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
             <div className="theme-setting-section">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Palette size={16} className="icon-primary" />
-                旅行のテーマ・雰囲気（色合い・柄パターン＆プラン自動作成）
+                旅行のテーマ・雰囲気（色合い・柄パターン＆自動作成）
               </label>
               <p className="modal-subtext" style={{ marginBottom: '8px' }}>
-                テーマ（例: 温泉、沖縄、京都、北海道、キャンプ、グルメなど）を入力して<strong>「プラン自動作成」</strong>を押すと、タイトル・日程・タイムライン・持ち物・予算・スポットが一発で自動生成されます！
+                テーマを入力して<strong>「このテーマで自動作成」</strong>を押すと、旅程・持ち物・予算の初期枠組みを一発作成できます。
               </p>
 
               {/* テーマ入力欄＆自動作成ボタン */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
                 <div className="theme-keyword-input-wrap" style={{ flex: 1, margin: 0 }}>
                   <Sparkles size={16} className="sparkle-icon" />
                   <input 
                     type="text" 
-                    placeholder="テーマを入力（例: 温泉、京都、沖縄、北海道、キャンプ）"
+                    placeholder="テーマや目的を入力（自由入力）"
                     value={themeKeyword}
                     onChange={(e) => handleKeywordChange(e.target.value)}
                     className="form-control"
@@ -120,38 +129,17 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
                   className="btn btn-primary"
                   style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}
                   onClick={() => handleAutoGeneratePlan(themeKeyword)}
-                  title="入力したテーマに合わせてプラン・旅程・持ち物・スポットを自動作成します"
+                  title="入力したテーマに合わせてプラン・旅程・持ち物を自動作成します"
                 >
                   <Sparkles size={16} />
                   このテーマで自動作成
                 </button>
               </div>
 
-              {/* 人気テーマのクイック選択チップ */}
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>
-                  おすすめの旅行テーマ（クリックで自動作成）:
-                </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {POPULAR_THEMES.map((pt) => (
-                    <button
-                      type="button"
-                      key={pt.id}
-                      className="tag-filter-btn"
-                      style={{ fontSize: '0.78rem', padding: '4px 10px', borderRadius: '16px' }}
-                      onClick={() => {
-                        setThemeKeyword(pt.themeKeyword);
-                        handleAutoGeneratePlan(pt.themeTitle);
-                      }}
-                      title={pt.description}
-                    >
-                      {pt.badge} {pt.themeTitle.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* テーマカラー・柄プリセット一覧選択 */}
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>
+                しおりのデザイン・テーマ柄を選択:
+              </div>
               <div className="theme-chips-list">
                 {THEME_PRESETS.map((theme) => {
                   const isSelected = theme.id === selectedThemeId;
@@ -193,7 +181,7 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="例: 京都 2泊3日 風情とグルメを満喫する癒やし旅"
+                placeholder="旅行タイトルを入力"
                 className="form-control"
               />
             </div>
@@ -204,7 +192,7 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
                 type="text" 
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                placeholder="例: 京都府（嵐山・祇園・東山）"
+                placeholder="目的地・行き先を入力"
                 className="form-control"
               />
             </div>
@@ -250,10 +238,53 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
                   type="text" 
                   value={members}
                   onChange={(e) => setMembers(e.target.value)}
-                  placeholder="例: 自分, さくら, けんじ"
+                  placeholder="メンバーのお名前を入力（カンマ区切り）"
                   className="form-control"
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Camera size={14} /> 旅行のカバー写真（任意）
+                </span>
+                <button
+                  type="button"
+                  className="link-btn-text"
+                  style={{ fontSize: '0.78rem' }}
+                  onClick={() => setIsPhotoModalOpen(true)}
+                >
+                  {coverImage ? '写真・画像を変更する' : '写真を追加する'}
+                </button>
+              </label>
+
+              {coverImage ? (
+                <div style={{ position: 'relative', width: '100%', height: '110px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
+                  <img src={coverImage} alt="カバー写真プレビュー" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem' }}
+                    onClick={() => setCoverImage(undefined)}
+                  >
+                    写真なし（柄のみ）にする
+                  </button>
+                </div>
+              ) : (
+                <div 
+                  style={{ padding: '12px 14px', background: '#f8fafc', border: '1px dashed var(--border-light)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <span>【写真なし】伝統柄パターン＆グラデーションで美しく表示されます。</span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.74rem', padding: '3px 8px' }}
+                    onClick={() => setIsPhotoModalOpen(true)}
+                  >
+                    写真を選択
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -278,6 +309,15 @@ export const EditTripModal: React.FC<EditTripModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* カバー写真変更モーダル */}
+      <PhotoEditorModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+        title={`${title || '旅行'} のカバー写真`}
+        currentImageUrl={coverImage}
+        onSave={(newUrl) => setCoverImage(newUrl)}
+      />
     </div>
   );
 };
