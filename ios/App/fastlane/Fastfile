@@ -3,16 +3,15 @@ default_platform(:ios)
 platform :ios do
   desc "Build and upload iOS app to App Store Connect"
   lane :release do
-    # 1. Authenticate with App Store Connect API
+    # 1. App Store Connect API Key 設定
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"],
-      is_key_content_base64: false,
+      key_filepath: "fastlane/AuthKey.p8",
       in_house: false
     )
 
-    # 2. Setup temporary keychain for CI
+    # 2. CI環境用の一時キーチェーンを作成
     keychain_name = "ci_keychain"
     keychain_password = "ci_keychain_password"
     create_keychain(
@@ -24,7 +23,7 @@ platform :ios do
       lock_when_sleeps: false
     )
 
-    # 3. Download or create Apple Distribution Certificate
+    # 3. Apple公式の配布証明書（Distribution Certificate）を取得/作成
     get_certificates(
       type: "distribution",
       keychain_name: keychain_name,
@@ -32,13 +31,13 @@ platform :ios do
       api_key: api_key
     )
 
-    # 4. Download or create App Store Provisioning Profile
+    # 4. App Store用プロビジョニングプロファイルを取得/作成
     get_provisioning_profile(
       app_identifier: "com.tabiplan.travelapp",
       api_key: api_key
     )
 
-    # 5. Build and archive signed IPA
+    # 5. 正式署名してIPAをビルド
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
@@ -47,7 +46,7 @@ platform :ios do
       output_name: "App.ipa"
     )
 
-    # 6. Upload IPA directly to App Store Connect
+    # 6. App Store Connectへ自動アップロード
     upload_to_app_store(
       api_key: api_key,
       skip_metadata: true,

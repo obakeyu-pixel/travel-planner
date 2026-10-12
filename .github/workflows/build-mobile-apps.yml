@@ -70,13 +70,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3'
-          bundler-cache: true
-          working-directory: ios/App
-
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -93,7 +86,9 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
-          bundle exec fastlane release
+          mkdir -p fastlane
+          echo "$APP_STORE_CONNECT_PRIVATE_KEY" > fastlane/AuthKey.p8
+          fastlane release
 
       - name: Upload iOS App IPA Artifact
         uses: actions/upload-artifact@v4
