@@ -32,7 +32,10 @@ platform :ios do
       api_key: api_key
     )
 
-    # 5. 正式署名してIPAをビルド
+    # 5. プロジェクトの署名設定を手動署名に切り替え（CIビルドでチームエラーを防ぐ）
+    disable_automatic_code_signing(path: "App.xcodeproj")
+
+    # 6. 正式署名してIPAをビルド
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
