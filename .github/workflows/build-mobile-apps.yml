@@ -61,6 +61,7 @@ jobs:
   build-ios:
     name: 🍏 Build & Upload iOS App to App Store Connect
     runs-on: macos-14
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
