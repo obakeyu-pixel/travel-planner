@@ -32,26 +32,39 @@ platform :ios do
       api_key: api_key
     )
 
-    # 5. プロジェクトの署名設定を手動署名に切り替え ＆ プロファイルをターゲットに紐付け
+    # 5. プロファイルからTeam IDを自動抽出し、プロジェクトとビルド引数に反映
+    profile_path = Actions.lane_context[Actions::SharedValues::SIGH_PROFILE_PATH]
+    plist_xml = sh("security cms -D -i #{profile_path}")
+    team_id = plist_xml[/<key>TeamIdentifier<\/key>.*?<string>([^<]+)<\/string>/m, 1]
+    UI.message("Extracted Development Team ID: #{team_id}")
+
+    if team_id
+      update_project_team(
+        path: "App.xcodeproj",
+        team_id: team_id
+      )
+    end
+
     update_code_signing_settings(
       use_automatic_signing: false,
-      path: "App.xcodeproj"
+      path: "App.xcodeproj",
+      team_id: team_id
     )
 
     update_project_provisioning(
       xcodeproj: "App.xcodeproj",
-      profile: Actions.lane_context[Actions::SharedValues::SIGH_PROFILE_PATH],
+      profile: profile_path,
       target_filter: ".*"
     )
 
-    # 6. 正式署名してIPAをビルド
+    # 6. 正式署名してIPAをビルド（Team IDとプロファイルを明示指定）
     build_app(
       project: "App.xcodeproj",
       scheme: "App",
       export_method: "app-store",
       output_directory: "build-output",
       output_name: "App.ipa",
-      xcargs: "PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual'"
+      xcargs: "DEVELOPMENT_TEAM='#{team_id}' PROVISIONING_PROFILE_SPECIFIER='#{ENV['SIGH_UUID']}' CODE_SIGN_STYLE='Manual' CODE_SIGN_IDENTITY='Apple Distribution'"
     )
 
     # 6. App Store Connectへ高速アップロード
