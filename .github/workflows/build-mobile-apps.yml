@@ -48,5 +48,8 @@ jobs:
         if: always()
         with:
           name: iOS-App-IPA
-          path: ios/App/build-output/*.ipa
+          path: |
+            ios/App/build-output/*.ipa
+            ~/Library/Logs/gym/*.log
+            ~/Library/Logs/fastlane/*.log
           retention-days: 14

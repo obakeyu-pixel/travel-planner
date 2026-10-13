@@ -18,7 +18,7 @@ platform :ios do
       lock_when_sleeps: false
     )
 
-    custom_keychain_path = lane_context[SharedValues::KEYCHAIN_PATH]
+    custom_keychain_path = Actions.lane_context[Actions::SharedValues::KEYCHAIN_PATH]
     UI.message("Created CI keychain at: #{custom_keychain_path}")
 
     # 1. App Store Connect API Key 設定
@@ -48,7 +48,7 @@ platform :ios do
     )
 
     # 4. codesignがパスワード入力なしで秘密鍵を使えるよう、ACL（パーティションリスト）を更新
-    sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k #{keychain_password} #{custom_keychain_path} || true")
+    sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k #{keychain_password} '#{custom_keychain_path}' || true")
 
     # 5. App Store用プロビジョニングプロファイルを取得/作成
     get_provisioning_profile(
