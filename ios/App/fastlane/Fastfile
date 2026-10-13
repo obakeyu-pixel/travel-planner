@@ -18,8 +18,19 @@ platform :ios do
       lock_when_sleeps: false
     )
 
-    custom_keychain_path = Actions.lane_context[Actions::SharedValues::KEYCHAIN_PATH]
-    UI.message("Created CI keychain at: #{custom_keychain_path}")
+    # パスを展開し、macOS Sonomaが付与する -db サフィックスを確実に解決
+    raw_path = Actions.lane_context[Actions::SharedValues::KEYCHAIN_PATH] || keychain_name
+    expanded_path = File.expand_path(raw_path)
+    if File.exist?("#{expanded_path}-db")
+      custom_keychain_path = "#{expanded_path}-db"
+    elsif File.exist?(expanded_path)
+      custom_keychain_path = expanded_path
+    elsif File.exist?(File.expand_path("~/Library/Keychains/#{keychain_name}-db"))
+      custom_keychain_path = File.expand_path("~/Library/Keychains/#{keychain_name}-db")
+    else
+      custom_keychain_path = File.expand_path("~/Library/Keychains/#{keychain_name}")
+    end
+    UI.message("Verified CI keychain path on disk: #{custom_keychain_path}")
 
     # 1. App Store Connect API Key 設定
     api_key = app_store_connect_api_key(
