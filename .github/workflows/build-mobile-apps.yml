@@ -10,11 +10,14 @@ on:
 jobs:
   build-ios:
     name: 🍏 Build & Upload iOS App to App Store Connect
-    runs-on: macos-14
-    timeout-minutes: 15
+    runs-on: macos-15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify Xcode Version
+        run: xcodebuild -version
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
